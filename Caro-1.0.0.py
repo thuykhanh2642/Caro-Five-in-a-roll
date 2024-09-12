@@ -142,8 +142,9 @@ while running:
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_0:  # Reset game if '0' is pressed
-                reset_game()
                 game_over = True
+
+                reset_game()
 
     pygame.display.flip()
 
