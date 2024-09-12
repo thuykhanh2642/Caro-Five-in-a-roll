@@ -22,50 +22,88 @@ title_font = pygame.font.SysFont(None, 60)
 current_player = Player1
 Screen = pygame.display.set_mode((WindowSize, WindowSize + HeaderSize))
 pygame.display.set_caption('CaroChess')
+clock = pygame.time.Clock()
+
+ani_progress = {}
 
 winning_line = [ ]
 Grid = [[0 for _ in range(GridSize)] for _ in range (GridSize)]
 Score = {Player1: 0, Player2: 0}
 
 def draw_grid():
-     for x in range(GridSize):
-         pygame.draw.line(Screen, GridColor, (x * CellSize, HeaderSize),(x*CellSize,WindowSize+HeaderSize), LineW)
-         pygame.draw.line(Screen,GridColor,(0,x*CellSize + HeaderSize),(WindowSize,x*CellSize+HeaderSize),LineW)
+    for x in range(GridSize):
+        pygame.draw.line(Screen, (30,30,30), (x * CellSize + 3, HeaderSize + 3), (x*CellSize + 3, WindowSize + HeaderSize + 3), LineW + 2)
+        pygame.draw.line(Screen, GridColor, (x * CellSize, HeaderSize), (x*CellSize,WindowSize + HeaderSize), LineW)
+
+        pygame.draw.line(Screen, (30,30,30), (3, x*CellSize + HeaderSize + 3), (WindowSize + 3, x*CellSize + HeaderSize + 3), LineW + 2)
+        pygame.draw.line(Screen, GridColor, (0, x*CellSize + HeaderSize), (WindowSize, x*CellSize + HeaderSize), LineW)
+
          
 def draw_board():
     for row in range(GridSize):
         for col in range(GridSize):
             if Grid[row][col] == Player1:
-                pygame.draw.line(Screen, Player1Color, (col * CellSize + 10, row * CellSize + 10 + HeaderSize), 
-                                 ((col + 1) * CellSize - 10, (row + 1) * CellSize - 10 + HeaderSize), LineW)
-                pygame.draw.line(Screen, Player1Color, ((col + 1) * CellSize - 10, row * CellSize + 10 + HeaderSize), 
-                                 (col * CellSize + 10, (row + 1) * CellSize - 10 + HeaderSize), LineW)
+                # Animate drawing of X
+                progress = ani_progress.get((row, col), 1)  # Default to fully drawn if not animating
+                draw_animated_x(row, col, progress)
+
             elif Grid[row][col] == Player2:
-                pygame.draw.circle(Screen, Player2Color, 
-                                   (col * CellSize + CellSize // 2, row * CellSize + CellSize // 2 + HeaderSize), 
-                                   CellSize // 2 - 10, LineW)
+                # Animate drawing of O
+                progress = ani_progress.get((row, col), 1)
+                draw_animated_o(row, col, progress)
 
 def draw_header():
     Screen.fill(White)
+    
     title_text = title_font.render('Caro Game', True, BG_Color)
-    Screen.blit(title_text, (WindowSize // 4, 10))
+    
+    title_width = title_text.get_width()
+    
+    title_x = (WindowSize - title_width) // 2
+    Screen.blit(title_text, (title_x, 10))
 
-    # Player turn indicator
     if current_player == Player1:
         turn_text = font.render("Player 1's Turn", True, Player1Color)
     else:
         turn_text = font.render("Player 2's Turn", True, Player2Color)
-    Screen.blit(turn_text, (WindowSize // 3, 60))
+    
+    Screen.blit(turn_text, (WindowSize // 6, 60))
 
     # Display score
     score_text = font.render(f"X: {Score[Player1]}  O: {Score[Player2]}", True, BG_Color)
     Screen.blit(score_text, (10, 60))
+    
+    
+def draw_animated_x(row, col, progress):
+    start_x = col * CellSize + 10
+    start_y = row * CellSize + 10 + HeaderSize
+    end_x = (col + 1) * CellSize - 10
+    end_y = (row + 1) * CellSize - 10 + HeaderSize
+
+    # Draw the first diagonal line, progress determines how much of the line is drawn
+    pygame.draw.line(Screen, Player1Color, 
+                     (start_x, start_y), 
+                     (start_x + (end_x - start_x) * progress, start_y + (end_y - start_y) * progress), LineW)
+
+    # Draw the second diagonal line
+    pygame.draw.line(Screen, Player1Color, 
+                     (end_x, start_y), 
+                     (end_x - (end_x - start_x) * progress, start_y + (end_y - start_y) * progress), LineW)
+
+def draw_animated_o(row, col, progress):
+    center = (col * CellSize + CellSize // 2, row * CellSize + CellSize // 2 + HeaderSize)
+    max_radius = CellSize // 2 - 10
+    current_radius = int(max_radius * progress)  # Progressively increase the radius
+    pygame.draw.circle(Screen, Player2Color, center, current_radius, LineW)
 
 def highlight_winning_line():
     if winning_line:
         for row, col in winning_line:
-            pygame.draw.rect(Screen, Color2, 
-                             (col * CellSize, row * CellSize + HeaderSize, CellSize, CellSize), 4)
+            for thickness in range(4 , 9):  # Adjust for glow effect
+                pygame.draw.rect(Screen, (0, 250, 0), 
+                                 (col * CellSize, row * CellSize + HeaderSize, CellSize, CellSize), thickness)
+
+
 
 def check_winner(player):
     global winning_line
@@ -101,6 +139,7 @@ def reset_game():
     Grid = [[0 for _ in range(GridSize)] for _ in range(GridSize)]
     current_player = Player1
     winning_line = []
+    game_over = False
 
 # Game loop
 running = True
@@ -111,6 +150,12 @@ while running:
     draw_grid()
     draw_board()
     highlight_winning_line()
+    
+    for (row, col), progress in ani_progress.items():
+        if progress < 1:
+            ani_progress[(row, col)] += 0.05  # Increase the progress by 5% per frame
+        else:
+            ani_progress[(row, col)] = 1  # Cap the progress at 1 (fully drawn)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -128,7 +173,7 @@ while running:
 
                 if Grid[row][col] == 0:
                     Grid[row][col] = current_player
-
+                    ani_progress[(row, col)] = 0
                     # Check for a winner
                     if check_winner(current_player):
                         Score[current_player] += 1
@@ -141,10 +186,13 @@ while running:
                         current_player = Player2 if current_player == Player1 else Player1
 
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_0:  # Reset game if '0' is pressed
-                game_over = True
+            if event.key == pygame.K_r:  # Reset game if 'r' is pressed
 
                 reset_game()
+                game_over = False
+                
+    pygame.display.flip()
+    clock.tick(60)  # Maintain 60 FPS
 
     pygame.display.flip()
 
