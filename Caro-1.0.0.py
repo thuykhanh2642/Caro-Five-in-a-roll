@@ -160,6 +160,7 @@ def show_menu():
     title_font = pygame.font.SysFont(None, 80)
     menu_font = pygame.font.SysFont(None, 40)
     
+    # Render menu options
     title_text = title_font.render('Caro Chess', True, BG_Color)
     pvp_text = menu_font.render('1. Player vs Player', True, Player1Color)
     pve_text = menu_font.render('2. Player vs AI', True, Player2Color)
@@ -171,19 +172,23 @@ def show_menu():
 
     pygame.display.flip()
 
-    # Wait for player input
+    pvp_rect = pygame.Rect(WindowSize // 4, WindowSize // 3, 300, 50)  # PvP button area
+    pve_rect = pygame.Rect(WindowSize // 4, WindowSize // 3 + 50, 300, 50)  # PvE button area
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
-            if event.type == pygame.KEYDOWN:
-                print(f"Key pressed: {event.key}")  # Debugging line to see if keys are registered
-                if event.key == pygame.K_1:  # Player vs Player
-                    return 'pvp'
-                elif event.key == pygame.K_2:  # Player vs AI
-                    return 'pve'
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+
+                if pvp_rect.collidepoint(mouse_x, mouse_y):
+                    return 'pvp' 
+
+                if pve_rect.collidepoint(mouse_x, mouse_y):
+                    return 'pve' 
 
 
 # Main Program
